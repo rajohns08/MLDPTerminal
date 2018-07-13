@@ -46,7 +46,7 @@ import java.util.UUID;
  */
 public class MldpBluetoothService extends Service {
 
-    private final static String TAG = MldpBluetoothService.class.getSimpleName();                   //Service name for logging messages on the ADB
+    private final static String TAG = "uStartTag";
 
     public static final String INTENT_EXTRA_SERVICE_ADDRESS = "BLE_SERVICE_DEVICE_ADDRESS";
     public static final String INTENT_EXTRA_SERVICE_NAME = "BLE_SERVICE_DEVICE_NAME";

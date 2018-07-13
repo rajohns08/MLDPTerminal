@@ -41,15 +41,13 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 
-import java.io.UnsupportedEncodingException;
-
 /**
  * Activity provides a terminal interface to send and receive bytes from an MLDP enabled
  * Bluetooth LE module such as an RN4020.
  */
 public class MldpTerminalActivity extends Activity {
 
-    private final static String TAG = MldpTerminalActivity.class.getSimpleName();                   //Activity name for logging messages on the ADB
+    private final static String TAG = "uStartTag";
 
     private static final String PREFS = "PREFS";                                                    //Strings to identify fields stored in shared preferences
     private static final String PREFS_NAME = "NAME";                                                //used to save name and MAC address of Bluetooth device and
