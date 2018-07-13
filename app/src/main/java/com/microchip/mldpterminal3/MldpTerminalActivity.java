@@ -47,7 +47,7 @@ import android.widget.TextView;
  */
 public class MldpTerminalActivity extends Activity {
 
-    private final static String TAG = "uStartTag";
+    private final static String TAG = MldpTerminalActivity.class.getSimpleName();
 
     private static final String PREFS = "PREFS";                                                    //Strings to identify fields stored in shared preferences
     private static final String PREFS_NAME = "NAME";                                                //used to save name and MAC address of Bluetooth device and

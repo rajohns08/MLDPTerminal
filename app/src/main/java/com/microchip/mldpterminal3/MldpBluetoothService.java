@@ -33,8 +33,9 @@ import android.os.Binder;
 import android.os.Build;
 import android.os.IBinder;
 import android.util.Log;
-import java.util.List;
+
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Queue;
 import java.util.UUID;
 
@@ -46,7 +47,7 @@ import java.util.UUID;
  */
 public class MldpBluetoothService extends Service {
 
-    private final static String TAG = "uStartTag";
+    private final static String TAG = MldpBluetoothService.class.getSimpleName();
 
     public static final String INTENT_EXTRA_SERVICE_ADDRESS = "BLE_SERVICE_DEVICE_ADDRESS";
     public static final String INTENT_EXTRA_SERVICE_NAME = "BLE_SERVICE_DEVICE_NAME";
@@ -150,13 +151,15 @@ public class MldpBluetoothService extends Service {
         //Connected or disconnected
         @Override
         public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
+            Log.d(Tag.uStart, "onConnectionStateChanged hit with newState=" + newState);
             try {
                 if (status == BluetoothGatt.GATT_SUCCESS) {
                     connectionAttemptCountdown = 0;                                                     //Stop counting connection attempts
                     if (newState == BluetoothProfile.STATE_CONNECTED) {                                 //Connected
+                        String justConnectedDeviceName = BluetoothLe.getDeviceName(gatt.getDevice());
                         final Intent intent = new Intent(ACTION_BLE_CONNECTED);
                         sendBroadcast(intent);
-                        Log.i(TAG, "Connected to BLE device");
+                        Log.d(Tag.uStart, "Successfully connected to device (" + justConnectedDeviceName + "), attempting service discovery");
                         descriptorWriteQueue.clear();                                                   //Clear write queues in case there was something left in the queue from the previous connection
                         characteristicWriteQueue.clear();
                         bluetoothGatt.discoverServices();                                               //Discover services after successful connection
@@ -187,18 +190,21 @@ public class MldpBluetoothService extends Service {
         //Service discovery completed
         @Override
         public void onServicesDiscovered(BluetoothGatt gatt, int status) {
+            Log.d(Tag.uStart, "onServicesDiscovered with status=" + status);
             try {
                 mldpDataCharacteristic = transparentTxDataCharacteristic = transparentRxDataCharacteristic = null;
                 if (status == BluetoothGatt.GATT_SUCCESS) {
+                    Log.d(Tag.uStart, "Services discovered callback hit");
                     List<BluetoothGattService> gattServices = gatt.getServices();                       //Get the list of services discovered
                     if (gattServices == null) {
-                        Log.d(TAG, "No BLE services found");
+                        Log.d(Tag.uStart, "No BLE services found");
                         return;
                     }
                     UUID uuid;
                     for (BluetoothGattService gattService : gattServices) {                             //Loops through available GATT services
                         uuid = gattService.getUuid();                                                   //Get the UUID of the service
                         if (uuid.equals(UUID_MLDP_PRIVATE_SERVICE) || uuid.equals(UUID_TANSPARENT_PRIVATE_SERVICE)) { //See if it is the MLDP or Transparent private service UUID
+                            Log.d(Tag.uStart, "MLDP Private service found");
                             List<BluetoothGattCharacteristic> gattCharacteristics = gattService.getCharacteristics();
                             for (BluetoothGattCharacteristic gattCharacteristic : gattCharacteristics) { //Loops through available characteristics
                                 uuid = gattCharacteristic.getUuid();                                    //Get the UUID of the characteristic
@@ -229,15 +235,26 @@ public class MldpBluetoothService extends Service {
                                 }
 
                                 if (uuid.equals(UUID_MLDP_DATA_PRIVATE_CHAR)) {                         //See if it is the MLDP data private characteristic UUID
+                                    Log.d(Tag.uStart, "MLDP data private characteristic found");
                                     mldpDataCharacteristic = gattCharacteristic;
                                     final int characteristicProperties = gattCharacteristic.getProperties(); //Get the properties of the characteristic
                                     if ((characteristicProperties & (BluetoothGattCharacteristic.PROPERTY_NOTIFY)) > 0) { //See if the characteristic has the Notify property
-                                        bluetoothGatt.setCharacteristicNotification(gattCharacteristic, true); //If so then enable notification in the BluetoothGatt
+                                        boolean notificationStatusSet = bluetoothGatt.setCharacteristicNotification(gattCharacteristic, true); //If so then enable notification in the BluetoothGatt
+                                        if (notificationStatusSet) {
+                                            Log.d(Tag.uStart, "Notification status set successfully on gatt");
+                                        } else {
+                                            Log.d(Tag.uStart, "Notification status set failed on gatt");
+                                        }
                                         BluetoothGattDescriptor descriptor = gattCharacteristic.getDescriptor(UUID_CHAR_NOTIFICATION_DESCRIPTOR); //Get the descriptor that enables notification on the server
                                         descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE); //Set the value of the descriptor to enable notification
                                         descriptorWriteQueue.add(descriptor);                           //put the descriptor into the write queue
                                         if(descriptorWriteQueue.size() == 1) {                          //If there is only 1 item in the queue, then write it.  If more than 1, we handle asynchronously in the callback above
-                                            bluetoothGatt.writeDescriptor(descriptor);                 //Write the descriptor
+                                            boolean writeInitiated = bluetoothGatt.writeDescriptor(descriptor);                 //Write the descriptor
+                                            if (writeInitiated) {
+                                                Log.d(Tag.uStart, "Descriptor notification write initiated successfully");
+                                            } else {
+                                                Log.d(Tag.uStart, "Descriptor notification write failed");
+                                            }
                                         }
                                     }
 //Use Indicate for RN4020 module firmware prior to 1.20 (not recommended)
@@ -283,7 +300,7 @@ public class MldpBluetoothService extends Service {
                 if (UUID_MLDP_DATA_PRIVATE_CHAR.equals(characteristic.getUuid()) || UUID_TRANSPARENT_TX_PRIVATE_CHAR.equals(characteristic.getUuid())) {                     //See if it is the MLDP data characteristic
                     String dataValue = characteristic.getStringValue(0);                                //Get the data in string format
                     //byte[] dataValue = characteristic.getValue();                                     //Example of getting data in a byte array
-                    Log.d(TAG, "New notification or indication");
+                    Log.d(Tag.uStart, "onCharacteristicChanged: " + dataValue);
                     final Intent intent = new Intent(ACTION_BLE_DATA_RECEIVED);                         //Create the intent to announce the new data
                     intent.putExtra(INTENT_EXTRA_SERVICE_DATA, dataValue);                              //Add the data to the intent
                     sendBroadcast(intent);                                                              //Broadcast the intent

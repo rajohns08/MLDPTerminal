@@ -48,7 +48,7 @@ import java.util.ArrayList;
  * Activity for scanning and displaying available Bluetooth LE devices
  */
 public class MldpBluetoothScanActivity extends ListActivity {
-	private final static String TAG = "uStartTag";
+	private final static String TAG = MldpBluetoothScanActivity.class.getSimpleName();
 
     public static final String INTENT_EXTRA_SCAN_ADDRESS = "BLE_SCAN_DEVICE_ADDRESS";
     public static final String INTENT_EXTRA_SCAN_NAME = "BLE_SCAN_DEVICE_NAME";
